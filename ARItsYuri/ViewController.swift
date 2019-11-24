@@ -13,6 +13,7 @@ import ARKit
 class ViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
+    var previewNode: SCNNode!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,11 +24,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Show statistics such as fps and timing information
         sceneView.showsStatistics = true
         
-        // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
-        
-        // Set the scene to the view
-        sceneView.scene = scene
+        previewNode = getNewNode()
+        previewNode.geometry!.firstMaterial!.transparency = 0.5
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -70,6 +68,36 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     func sessionInterruptionEnded(_ session: ARSession) {
         // Reset tracking and/or remove existing anchors if consistent tracking is required
+        
+    }
+
+    let path = Bundle.main.path(forResource: "art.scnassets/ItsYuri", ofType: "png")!
+    lazy var image = UIImage(contentsOfFile: path)
+    
+    func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        guard let currentFrame = sceneView.session.currentFrame else { return }
+        var translation = matrix_identity_float4x4
+        translation.columns.3.z = -0.1
+        previewNode.simdTransform = matrix_multiply(currentFrame.camera.transform, translation)
+    }
+
+    func getNewNode() -> SCNNode {
+        print(path)
+        let plane = SCNPlane(width: 0.05, height: 0.05)
+        plane.firstMaterial?.diffuse.contents = image
+        plane.firstMaterial?.lightingModel = .constant
+        let node = SCNNode(geometry: plane)
+        sceneView.scene.rootNode.addChildNode(node)
+        node.rotation = .init(0, 180, 0, 0)
+        return node
+    }
+    
+    @IBAction func handleTap() {
+        guard let currentFrame = sceneView.session.currentFrame else { return }
+        let node = getNewNode()
+        var translation = matrix_identity_float4x4
+        translation.columns.3.z = -0.1
+        node.simdTransform = matrix_multiply(currentFrame.camera.transform, translation)
         
     }
 }
